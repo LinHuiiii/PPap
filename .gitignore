@@ -207,10 +207,10 @@ marimo/_lsp/
 __marimo__/
 
 # 忽略所有可执行文件
-*.exe 
+*.exe
 # 忽略其他可能不需要的构建产物
 /dist/ 
 /build/
 
 # 警钟敲烂，别再把隐私传上去了——忽略config.json
-*.json
+config.json
