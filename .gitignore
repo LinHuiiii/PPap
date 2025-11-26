@@ -213,4 +213,4 @@ __marimo__/
 /build/
 
 # 警钟敲烂，别再把隐私传上去了——忽略config.json
-config.json
+*.json
