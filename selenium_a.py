@@ -76,9 +76,9 @@ def visit_edge(download_dir, driver_path):
     if not os.path.exists(driver_path):
         raise FileNotFoundError(f"WebDriver文件未找到。请检查路径是否正确: {driver_path}")
     edge_options = webdriver.EdgeOptions()
-    # 【关键修改】添加参数，禁用所有扩展程序
+    # 添加参数，禁用所有扩展程序
     edge_options.add_argument("--disable-extensions")
-    # 解决 GPU 错误：禁用 GPU 加速
+    # 禁用 GPU 加速
     edge_options.add_argument("--disable-gpu")
     # 解决打包后的兼容性问题
     edge_options.add_argument("--no-sandbox")
@@ -87,6 +87,11 @@ def visit_edge(download_dir, driver_path):
     edge_options.add_argument("--ignore-certificate-errors")
     edge_options.add_argument("--ignore-ssl-errors")
     edge_options.add_argument("--allow-insecure-localhost")
+
+    # 无头浏览器模式 ———— 调试的时候记得关掉。
+
+    edge_options.add_argument("--headless")
+
     prefs = {
         'download.default_directory': download_dir,
         'download.prompt_for_download': False,
