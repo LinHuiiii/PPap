@@ -6,7 +6,7 @@ def _default_log(message):
     print(message)
 
 
-def main_use(download_dir, cookies, url, user_id, father_class, move_step, driver_path, log_func=None):
+def main_use(download_dir, cookies, url, user_id, father_class, move_step, driver_path, log_func=None, headless=True):
 
     """
         运行图片爬取器的主逻辑。
@@ -21,7 +21,7 @@ def main_use(download_dir, cookies, url, user_id, father_class, move_step, drive
     """
     actual_log = log_func if log_func is not None else _default_log
     # 调用 selenium.py 中的函数来创建并返回 driver
-    driver = selenium_a.visit_edge(download_dir, driver_path)
+    driver = selenium_a.visit_edge(download_dir, driver_path, headless=headless)
     actual_log("Driver初始化成功。")
 
     # 2. 访问并注入 Cookie (传递 driver)

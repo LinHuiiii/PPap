@@ -2,7 +2,6 @@ import time
 from PyQt6.QtCore import QThread, pyqtSignal
 import use
 import selenium_a
-import json
 
 
 class CrawlerThread(QThread):
@@ -10,13 +9,14 @@ class CrawlerThread(QThread):
     progress_signal = pyqtSignal(int)  # 进度百分比
     stage_signal = pyqtSignal(str)  # 当前阶段描述
 
-    def __init__(self, path, user, move_step, auth_token, father_class):
+    def __init__(self, path, user, move_step, auth_token, father_class, headless = True):
         super().__init__()
         self.download_dir = path
         self.user_id = user
         self.move_step = move_step
         self.auth_token = auth_token
         self.father_class = father_class
+        self.headless = headless
 
     def run(self):
         try:
@@ -43,7 +43,8 @@ class CrawlerThread(QThread):
                 father_class=self.father_class,
                 move_step=self.move_step,
                 driver_path=selenium_a.get_driver_path('msedgedriver.exe'),
-                log_func=self.log_signal.emit
+                log_func=self.log_signal.emit,
+                headless=self.headless
             )
 
             self.stage_signal.emit('一切顺利！')

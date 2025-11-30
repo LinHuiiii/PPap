@@ -1,16 +1,20 @@
 import json
 import sys
+from PyQt6.QtCore import Qt
 from config import Setting
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QFileDialog, QMessageBox, QTextEdit, QProgressBar, QDialog
+    QFileDialog, QMessageBox, QTextEdit, QProgressBar, QDialog, QCheckBox
 from worker import CrawlerThread
 
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("X 爬虫")
-        self.setGeometry(300, 300, 500, 400)
+        self.setGeometry(500, 200, 650, 750)
+
+        self.headless_mode = True
+        self.setup_headless_control()
 
         # 下载路径
         self.path = QLabel('下载路径：')
@@ -21,6 +25,7 @@ class MainWindow(QWidget):
         # 用户ID
         self.user = QLabel('用户ID（@后文字）：')
         self.user_input = QLineEdit()
+        self.user.setMaximumWidth(300)
 
         # 滚动次数
         self.scroll = QLabel('最大滚动次数')
@@ -41,7 +46,7 @@ class MainWindow(QWidget):
         # 日志显示
         self.log_label = QLabel('运行日志：')
         self.log_display = QTextEdit()
-        self.log_display.setMaximumHeight(120)  # 限制高度
+        self.log_display.setMaximumHeight(200)  # 限制高度
         self.log_display.setReadOnly(True)
 
         # 退出按钮
@@ -59,8 +64,11 @@ class MainWindow(QWidget):
         path_layout = QHBoxLayout()
         path_layout.addWidget(self.path_input)
         path_layout.addWidget(self.browse_button)
+        path_layout.addWidget(self.headless_checkbox)
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(10)
         layout.addWidget(self.path)
         layout.addLayout(path_layout)
         layout.addWidget(self.user)
@@ -69,6 +77,7 @@ class MainWindow(QWidget):
         layout.addWidget(self.scroll_input)
         layout.addWidget(self.start)
         layout.addWidget(self.settings_btn)
+
 
         # 🆕 添加进度显示
         layout.addWidget(self.stage_label)
@@ -79,6 +88,21 @@ class MainWindow(QWidget):
         layout.addWidget(self.quit_button)
 
         self.setLayout(layout)
+
+    def setup_headless_control(self):
+        # 创建控制无头模式的复选框
+        self.headless_checkbox = QCheckBox("静 默 行 动")
+        self.headless_checkbox.setChecked(self.headless_mode)
+        self.headless_checkbox.setToolTip("开启后浏览器在后台运行，不显示界面")
+        self.headless_checkbox.stateChanged.connect(self.toggle_headless_mode)
+
+    def toggle_headless_mode(self, state):
+        """切换无头模式状态"""
+        self.headless_mode = (state == Qt.CheckState.Checked.value)
+
+        # 可选：添加状态提示
+        status = "开启" if self.headless_mode else "关闭"
+        print(f"无头模式已{status}")
 
     def open_settings(self):
         dialog = Setting(self)
@@ -121,7 +145,7 @@ class MainWindow(QWidget):
             return classes
         return [str(classes)]
 
-    def open_settings(self):
+    def settings(self):
         dialog = Setting(self)
         result = dialog.exec()
         if result == QDialog.DialogCode.Accepted:
@@ -148,7 +172,8 @@ class MainWindow(QWidget):
             user=self.user_input.text(),
             move_step=int(self.scroll_input.text()),
             auth_token=auth_token,  # 🆕 使用动态配置
-            father_class=father_class  # 🆕 使用动态配置
+            father_class=father_class,  # 🆕 使用动态配置
+            headless = self.headless_mode
         )
         self.thread.log_signal.connect(self.log_output)
         self.thread.progress_signal.connect(self.progress_bar.setValue)  # 更新进度条

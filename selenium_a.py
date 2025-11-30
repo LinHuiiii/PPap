@@ -55,7 +55,7 @@ def get_driver_path(driver_filename='msedgedriver.exe'):
 
 
 # --- 动态路径构建逻辑结束 ---
-def visit_edge(download_dir, driver_path):
+def visit_edge(download_dir, driver_path, headless = True):
     """
     【原有索引方式说明】
     本函数仍然接受 driver_path 参数，保持向后兼容性。
@@ -89,8 +89,8 @@ def visit_edge(download_dir, driver_path):
     edge_options.add_argument("--allow-insecure-localhost")
 
     # 无头浏览器模式 ———— 调试的时候记得关掉。
-
-    edge_options.add_argument("--headless")
+    if headless:
+        edge_options.add_argument("--headless")
 
     prefs = {
         'download.default_directory': download_dir,
