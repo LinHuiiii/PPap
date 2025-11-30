@@ -40,7 +40,7 @@ class MainWindow(QWidget):
         self.progress_bar.setValue(0)
 
         # 开始按钮
-        self.start = QPushButton('下载')
+        self.start = QPushButton('开始!')
         self.start.clicked.connect(self.start_download)
 
         # 日志显示
