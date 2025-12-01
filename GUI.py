@@ -32,12 +32,16 @@ class MainWindow(QWidget):
         self.scroll_input = QLineEdit('40')
 
         # 进度条
-        self.stage_label = QLabel('准备就绪')
-        self.stage_label.setStyleSheet("font-weight: bold; color: #2c3e50; padding: 5px;")
+        self.phase_label = QLabel('等待开始')
+        self.phase_label.setStyleSheet("font-weight: bold; color: #2c3e50; padding: 5px;")
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setTextVisible(True)
         self.progress_bar.setValue(0)
+
+        self.stats_label = QLabel('')
+        self.stats_label.setStyleSheet("color: #666; padding: 3px;")
 
         # 开始按钮
         self.start = QPushButton('开始!')
@@ -80,8 +84,9 @@ class MainWindow(QWidget):
 
 
         # 🆕 添加进度显示
-        layout.addWidget(self.stage_label)
+        layout.addWidget(self.phase_label)
         layout.addWidget(self.progress_bar)
+        layout.addWidget(self.stats_label)
 
         layout.addWidget(self.log_label)
         layout.addWidget(self.log_display)
@@ -155,7 +160,9 @@ class MainWindow(QWidget):
 
     def start_download(self):
         self.progress_bar.setValue(0)
-        self.stage_label.setText("启动中...")
+        self.progress_bar.setRange(0, 100)  # 确保是正常模式
+        self.phase_label.setText("等待开始")
+        self.stats_label.setText("")
         self.log_display.clear()
 
         scroll = self.scroll_input.text()
@@ -176,8 +183,8 @@ class MainWindow(QWidget):
             headless = self.headless_mode
         )
         self.thread.log_signal.connect(self.log_output)
-        self.thread.progress_signal.connect(self.progress_bar.setValue)  # 更新进度条
-        self.thread.stage_signal.connect(self.stage_label.setText)  # 更新阶段文字
+        self.thread.phase_signal.connect(self.update_phase)
+        self.thread.stats_signal.connect(self.update_stats)
         self.thread.finished.connect(self.on_finished)
         self.thread.start()
 
@@ -208,6 +215,58 @@ class MainWindow(QWidget):
                 event.ignore()
         else:
             event.accept()
+
+    def update_phase(self, phase_name, progress):
+        """更新阶段和进度条"""
+        self.phase_label.setText(f"当前阶段: {phase_name}")
+
+        # 如果是"滚动查找图片"阶段，设置为忙碌模式
+        if phase_name == "滚动查找图片":
+            self.set_busy_indicator(True, self.stats_label.text())
+        else:
+            # 其他阶段：恢复正常模式并设置进度
+            self.set_busy_indicator(False, self.stats_label.text())
+            self.progress_bar.setValue(progress)
+
+    def update_stats(self, stats_text):
+        """更新统计信息，同时判断是否进入忙碌模式"""
+        self.stats_label.setText(stats_text)
+
+        # 判断是否是查找阶段（根据统计文本内容）
+        if "滚动进度:" in stats_text or "已找到图片:" in stats_text:
+            # 查找阶段：进入忙碌模式
+            self.set_busy_indicator(True, stats_text)
+        else:
+            # 其他阶段：恢复正常模式
+            self.set_busy_indicator(False, stats_text)
+
+    def set_busy_indicator(self, is_busy, stats_text=""):
+        """
+        设置进度条为忙碌指示器模式或正常模式
+
+        Args:
+            is_busy: True=显示滚动动画，False=显示正常进度
+            stats_text: 在忙碌模式下显示的统计文本
+        """
+        if is_busy:
+            self.progress_bar.setRange(0, 0)
+            self.progress_bar.setStyleSheet("""
+                    QProgressBar {
+                        border: 1px solid #cccccc;
+                        border-radius: 5px;
+                        text-align: center;
+                    }
+                    QProgressBar::chunk {
+                        background-color: #3498db;
+                        width: 10px;
+                        margin: 0.5px;
+                    }
+                """)
+            self.stats_label.setText(stats_text)
+        else:
+            self.progress_bar.setRange(0, 100)
+            self.progress_bar.setStyleSheet("")  # 恢复默认样式
+            self.stats_label.setText(stats_text)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

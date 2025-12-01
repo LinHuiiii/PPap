@@ -6,8 +6,8 @@ import selenium_a
 
 class CrawlerThread(QThread):
     log_signal = pyqtSignal(str)
-    progress_signal = pyqtSignal(int)  # 进度百分比
-    stage_signal = pyqtSignal(str)  # 当前阶段描述
+    phase_signal = pyqtSignal(str, int)  # (阶段名, 进度)
+    stats_signal = pyqtSignal(str)  # 统计信息
 
     def __init__(self, path, user, move_step, auth_token, father_class, headless = True):
         super().__init__()
@@ -20,19 +20,9 @@ class CrawlerThread(QThread):
 
     def run(self):
         try:
-            self.stage_signal.emit('初始化环境中...')
-            self.progress_signal.emit(10)
-
-            self.stage_signal.emit('准备浏览器驱动中...')
-            self.progress_signal.emit(20)
-            time.sleep(1)
-
-            self.stage_signal.emit('访问目标界面中...')
-            self.progress_signal.emit(30)
-            time.sleep(1)
-
-            self.stage_signal.emit('查找并且获取图片中...')
-            self.progress_signal.emit(40)
+            self.phase_signal.emit("初始化浏览器", 50)
+            time.sleep(0.5)
+            self.phase_signal.emit("初始化浏览器", 100)
 
             # 使用传入的参数而不是从文件读取
             use.main_use(
@@ -44,12 +34,12 @@ class CrawlerThread(QThread):
                 move_step=self.move_step,
                 driver_path=selenium_a.get_driver_path('msedgedriver.exe'),
                 log_func=self.log_signal.emit,
+                phase_callback=self.phase_signal.emit,  # 新增
+                stats_callback=self.stats_signal.emit,  # 新增
                 headless=self.headless
             )
-
-            self.stage_signal.emit('一切顺利！')
-            self.progress_signal.emit(100)
+            self.phase_signal.emit("任务完成", 100)
 
         except Exception as e:
             self.log_signal.emit(f"❌ 爬虫出错：{e}")
-            self.progress_signal.emit(0)
+            self.phase_signal.emit("出错", 0)

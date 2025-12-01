@@ -4,11 +4,12 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-def download_main(fin_pic, download_dir, log_func=print):
+
+def download_main(fin_pic, download_dir, log_func=print, progress_callback=None):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0'
     }
-    
+
     # 创建带重试机制的session
     session = requests.Session()
     retry_strategy = Retry(
@@ -20,18 +21,25 @@ def download_main(fin_pic, download_dir, log_func=print):
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
-    
+
+    total_count = len(fin_pic)
+    log_func(f"准备下载 {total_count} 张图片...")
+
     for index, url in enumerate(fin_pic):
+
+        if progress_callback:
+            progress_callback(index + 1, total_count)
+
         max_retries = 3
         retry_count = 0
         success = False
-        
+
         while retry_count < max_retries and not success:
             try:
                 response = session.get(url, headers=headers, stream=True, timeout=30)
                 response.raise_for_status()
 
-                file_name = f'image_{index+1}.jpg'
+                file_name = f'image_{index + 1}.jpg'
                 full_path = os.path.join(download_dir, file_name)
 
                 with open(full_path, 'wb') as f:
@@ -41,7 +49,7 @@ def download_main(fin_pic, download_dir, log_func=print):
                 log_func(f"✅ 图片下载成功: {full_path}")
                 success = True
 
-            except requests.exceptions.SSLError as e:
+            except (requests.exceptions.SSLError,requests.exceptions.RequestException) as e:
                 retry_count += 1
                 if retry_count < max_retries:
                     wait_time = 2 ** retry_count  # 指数退避：2秒、4秒、8秒
@@ -49,16 +57,7 @@ def download_main(fin_pic, download_dir, log_func=print):
                     time.sleep(wait_time)
                 else:
                     log_func(f"!! 下载第 {index + 1} 张图片失败 (SSL错误，已重试 {max_retries} 次): {e}")
-                    
-            except requests.exceptions.RequestException as e:
-                retry_count += 1
-                if retry_count < max_retries:
-                    wait_time = 2 ** retry_count
-                    log_func(f"   网络错误，第 {retry_count} 次重试（等待 {wait_time} 秒）...")
-                    time.sleep(wait_time)
-                else:
-                    log_func(f"!! 下载第 {index + 1} 张图片失败 (网络错误，已重试 {max_retries} 次): {e}")
-        
+
         if not success:
             continue
 

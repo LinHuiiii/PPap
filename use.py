@@ -6,7 +6,8 @@ def _default_log(message):
     print(message)
 
 
-def main_use(download_dir, cookies, url, user_id, father_class, move_step, driver_path, log_func=None, headless=True):
+def main_use(download_dir, cookies, url, user_id, father_class, move_step, driver_path,
+             log_func=None, phase_callback=None, stats_callback=None, headless=True):
 
     """
         运行图片爬取器的主逻辑。
@@ -20,13 +21,37 @@ def main_use(download_dir, cookies, url, user_id, father_class, move_step, drive
             move_step: 最大滚动次数
     """
     actual_log = log_func if log_func is not None else _default_log
+
+    def update_phase(phase_name, progress):
+        if phase_callback:
+            phase_callback(phase_name, progress)
+        actual_log(f"[{phase_name}] 进度: {progress}%")
+
+    def update_stats(stats_text):
+        if stats_callback:
+            stats_callback(stats_text)
+        actual_log(stats_text)
+
+    def download_progress(current_num, total_count):
+        # 计算百分比
+        progress = int((current_num / total_count) * 100) if total_count > 0 else 0
+        # 更新阶段进度
+        if phase_callback:
+            phase_callback("下载图片", progress)
+        # 更新统计信息
+        if stats_callback:
+            stats_callback(f"下载进度: {current_num}/{total_count}")
+
     # 调用 selenium.py 中的函数来创建并返回 driver
     driver = selenium_a.visit_edge(download_dir, driver_path, headless=headless)
+    update_phase("访问页面并登录", 0)
     actual_log("Driver初始化成功。")
 
     # 2. 访问并注入 Cookie (传递 driver)
     actual_log("--- 登录和访问用户页 ---")
     selenium_a.visit_x(driver, cookies, url, user_id)
+    update_phase("访问页面并登录", 100)
+    update_stats("已登录并访问用户媒体页")
     actual_log("已访问用户媒体页。")
 
     # --- 核心滚动和提取循环 ---
@@ -44,8 +69,11 @@ def main_use(download_dir, cookies, url, user_id, father_class, move_step, drive
     scroll_count = 0
 
     actual_log("--- 启动模块化滚动和提取循环 ---")
+    update_phase("滚动查找图片", 0)
+    update_stats("开始查找图片...")
 
     for scroll_count in range(max_scrolls):
+        update_stats(f"滚动进度: {scroll_count + 1}/{max_scrolls} | 已找到图片: {len(all_final_urls)}")
         actual_log(f"\n--- 滚动循环 {scroll_count + 1} / {max_scrolls} ---")
 
         # 1. 调用 【寻找图片模块】 获取所有可见的元素
@@ -117,6 +145,8 @@ def main_use(download_dir, cookies, url, user_id, father_class, move_step, drive
         selenium_a.move(driver, scroll_distance=500, scroll_delay=2)
 
     actual_log(f"--- 循环结束。总共找到 {len(all_final_urls)} 个图片 URL。---")
+    update_phase("滚动查找图片", 100)
+    update_stats(f"查找完成！共找到 {len(all_final_urls)} 张图片")
 
     actual_log("\n=======================================================")
     actual_log("                  抓取统计总结                    ")
@@ -135,10 +165,23 @@ def main_use(download_dir, cookies, url, user_id, father_class, move_step, drive
 
     # 3. 爬取图片 (传递 driver)
     actual_log("--- 抓取图片大图 URL ---")
-    fin_pic = all_final_urls
+    if phase_callback:
+        phase_callback("下载图片", 0)
+    if stats_callback:
+        stats_callback(f"开始下载 {len(all_final_urls)} 张图片...")
 
-    actual_log("--- 下载图片到本地 ---")
-    download.download_main(fin_pic, download_dir, log_func=log_func)
+        # 调用下载函数，传递进度回调
+    download.download_main(
+        fin_pic=all_final_urls,
+        download_dir=download_dir,
+        log_func=actual_log,
+        progress_callback=download_progress
+    )
+    # 下载完成
+    if phase_callback:
+        phase_callback("下载图片", 100)
+    if stats_callback:
+        stats_callback("下载完成！")
     # 4. 关闭浏览器
     driver.quit()
     actual_log("浏览器已关闭。程序结束。")
